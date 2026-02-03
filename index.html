@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Contador de Tempo</title>
+
+<style>
+/* ===== RESET ===== */
+* {
+  box-sizing: border-box;
+  font-family: Arial, sans-serif;
+}
+
+/* ===== BODY ===== */
+body {
+  margin: 0;
+  padding: 0;
+  background-image: url("https://i.postimg.cc/3JjkTRHV/0e24f9bafcf94ba7dc2b6a0298948223.gif");
+  background-size: cover;
+  background-attachment: fixed;
+  color: white;
+  text-align: center;
+}
+
+/* ===== TITULOS ===== */
+h2 {
+  margin-top: 20px;
+  font-family: 'Franklin Gothic Medium', Arial, sans-serif;
+}
+
+/* ===== CARD PADRÃO ===== */
+.card {
+  background: rgba(0,0,0,0.65);
+  margin: 25px auto;
+  padding: 20px;
+  border-radius: 12px;
+  max-width: 420px;
+}
+
+/* ===== BOTÕES ===== */
+button {
+  background-color: #4CAF50;
+  border: none;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+button:hover {
+  background-color: #3e8e41;
+  transform: scale(1.05);
+}
+
+/* ===== INPUTS ===== */
+input {
+  padding: 10px;
+  border-radius: 6px;
+  border: none;
+  width: 90%;
+  margin-top: 10px;
+}
+
+/* ===== CONTADOR ===== */
+.countdown {
+  font-size: 42px;
+  margin-top: 15px;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+/* ===== TEXTO ===== */
+.feedback {
+  margin-top: 10px;
+  font-weight: bold;
+}
+
+/* ===== MOTIVAÇÃO ===== */
+.motivacao p {
+  background: rgba(255,255,255,0.9);
+  color: black;
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin: 6px auto;
+  max-width: 800px;
+  text-align: left;
+}
+</style>
+</head>
+
+<body>
+
+<h2>Even Though I Walk Through the Valley of the Shadow of Death I Fear No Evil.</h2>
+
+<!-- ===== CONTADOR DE CLIQUES ===== -->
+<div class="card">
+  <button id="clickBtn">Clique Aqui</button>
+  <div id="clickInfo" class="feedback">Cliques: 0</div>
+</div>
+
+<!-- ===== CONTADOR POR HORÁRIO ===== -->
+<div class="card">
+  <p>Tempo restante para o horário escolhido:</p>
+  <input type="text" id="hourInput" placeholder="08:30:00 PM">
+  <br><br>
+  <button id="startCountdown">Começar</button>
+  <div class="countdown" id="countdown">00:00:00</div>
+</div>
+
+<!-- ===== CONTADOR DE DIAS ===== -->
+<div class="card">
+  <p>Dias faltando até:</p>
+  <input type="date" id="targetDate">
+  <br><br>
+  <button id="calcDays">Calcular</button>
+  <div id="daysResult" class="feedback"></div>
+</div>
+
+<!-- ===== MOTIVAÇÃO ===== -->
+<div class="card motivacao">
+  <h3>Bushidô</h3>
+  <p><b>Gi</b> – Retidão</p>
+  <p><b>Yū</b> – Coragem</p>
+  <p><b>Jin</b> – Benevolência</p>
+  <p><b>Rei</b> – Respeito</p>
+  <p><b>Makoto</b> – Sinceridade</p>
+  <p><b>Meiyo</b> – Honra</p>
+  <p><b>Chūgi</b> – Lealdade</p>
+</div>
+
+<audio id="myAudio" src="sons/Still Beating [ ezmp3.cc ].mp3"></audio>
+
+<script>
+/* ===== CONTADOR DE CLIQUES ===== */
+let clicks = 0;
+const clickBtn = document.getElementById("clickBtn");
+const clickInfo = document.getElementById("clickInfo");
+
+clickBtn.addEventListener("click", () => {
+  clicks++;
+  clickInfo.textContent = `Cliques: ${clicks}`;
+
+  if (clicks === 10) clickInfo.textContent = "🔥 10 cliques!";
+  if (clicks === 50) clickInfo.textContent = "⚡ 50 cliques!";
+  if (clicks === 100) clickInfo.textContent = "🏆 100 cliques!";
+});
+
+/* ===== CONTADOR DE HORÁRIO ===== */
+let timer = null;
+
+document.getElementById("startCountdown").addEventListener("click", () => {
+  if (timer) clearInterval(timer);
+
+  const input = document.getElementById("hourInput").value.trim();
+  const regex = /^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)$/i;
+  const match = input.match(regex);
+
+  if (!match) {
+    alert("Formato inválido. Ex: 08:30:00 PM");
+    return;
+  }
+
+  let [ , h, m, s, period ] = match;
+  h = parseInt(h);
+  m = parseInt(m);
+  s = s ? parseInt(s) : 0;
+
+  if (period.toUpperCase() === "PM" && h !== 12) h += 12;
+  if (period.toUpperCase() === "AM" && h === 12) h = 0;
+
+  const now = new Date();
+  let target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, s);
+
+  if (target <= now) target.setDate(target.getDate() + 1);
+
+  timer = setInterval(() => {
+    const diff = target - new Date();
+    if (diff <= 0) {
+      clearInterval(timer);
+      document.getElementById("countdown").textContent = "Dia vencido.";
+      document.getElementById("myAudio").play();
+      return;
+    }
+
+    const hh = String(Math.floor(diff / 3600000)).padStart(2,"0");
+    const mm = String(Math.floor(diff % 3600000 / 60000)).padStart(2,"0");
+    const ss = String(Math.floor(diff % 60000 / 1000)).padStart(2,"0");
+
+    document.getElementById("countdown").textContent = `${hh}:${mm}:${ss}`;
+  }, 1000);
+});
+
+/* ===== CONTADOR DE DIAS ===== */
+document.getElementById("calcDays").addEventListener("click", () => {
+  const date = new Date(document.getElementById("targetDate").value);
+  if (isNaN(date)) {
+    alert("Escolha uma data válida.");
+    return;
+  }
+
+  const diff = Math.ceil((date - new Date()) / (1000*60*60*24));
+  document.getElementById("daysResult").textContent =
+    diff >= 0 ? `Faltam ${diff} dias.` : "Essa data já passou.";
+});
+</script>
+
+</body>
+</html>
