@@ -1,1 +1,258 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ritual Diário</title>
+
+<style>
+* {
+  box-sizing: border-box;
+  font-family: Arial, sans-serif;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-image: url("https://i.postimg.cc/3JjkTRHV/0e24f9bafcf94ba7dc2b6a0298948223.gif");
+  background-size: cover;
+  background-attachment: fixed;
+  color: white;
+  text-align: center;
+  transition: background 0.5s;
+}
+
+body.focus {
+  background-color: rgba(0,0,0,0.9);
+}
+
+h2 {
+  margin-top: 20px;
+  font-family: 'Franklin Gothic Medium', Arial, sans-serif;
+}
+
+.card {
+  background: rgba(0,0,0,0.65);
+  margin: 20px auto;
+  padding: 20px;
+  border-radius: 12px;
+  max-width: 420px;
+}
+
+button {
+  background-color: #4CAF50;
+  border: none;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+button:hover {
+  background-color: #3e8e41;
+  transform: scale(1.05);
+}
+
+input {
+  padding: 10px;
+  border-radius: 6px;
+  border: none;
+  width: 90%;
+  margin-top: 10px;
+}
+
+.countdown {
+  font-size: 42px;
+  margin-top: 15px;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  50% { transform: scale(1.05); }
+}
+
+.feedback {
+  margin-top: 10px;
+  font-weight: bold;
+  min-height: 22px;
+}
+
+.motivacao p {
+  background: rgba(255,255,255,0.9);
+  color: black;
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin: 6px auto;
+  max-width: 800px;
+  text-align: left;
+}
+
+.frase {
+  font-style: italic;
+  opacity: 0.9;
+}
+</style>
+</head>
+
+<body>
+
+<h2>Even Though I Walk Through the Valley of the Shadow of Death I Fear No Evil.</h2>
+
+<!-- FRASE DO DIA -->
+<div class="card frase" id="dailyPhrase"></div>
+
+<!-- STREAK -->
+<div class="card">
+  🔥 Streak atual: <span id="streak">0</span> dias<br>
+  🏆 Melhor streak: <span id="bestStreak">0</span>
+</div>
+
+<!-- CONTADOR DE CLIQUES -->
+<div class="card">
+  <button id="clickBtn">Clique Aqui</button>
+  <div id="clickInfo" class="feedback"></div>
+</div>
+
+<!-- CONTADOR POR HORÁRIO -->
+<div class="card">
+  <p>Tempo restante para o horário escolhido:</p>
+  <input type="text" id="hourInput" placeholder="08:30:00 PM">
+  <br><br>
+  <button id="startCountdown">Começar</button>
+  <div class="countdown" id="countdown">00:00:00</div>
+</div>
+
+<!-- CONTADOR DE DIAS -->
+<div class="card">
+  <p>Dias faltando até:</p>
+  <input type="date" id="targetDate">
+  <br><br>
+  <button id="calcDays">Calcular</button>
+  <div id="daysResult" class="feedback"></div>
+</div>
+
+<!-- MODO FOCO -->
+<div class="card">
+  <button id="focusBtn">Entrar em modo foco</button>
+</div>
+
+<!-- MOTIVAÇÃO -->
+<div class="card motivacao">
+  <h3>Bushidô</h3>
+  <p>Gi – Retidão</p>
+  <p>Yū – Coragem</p>
+  <p>Jin – Benevolência</p>
+  <p>Rei – Respeito</p>
+  <p>Makoto – Sinceridade</p>
+  <p>Meiyo – Honra</p>
+  <p>Chūgi – Lealdade</p>
+</div>
+
+<audio id="myAudio" src="sons/Still Beating [ ezmp3.cc ].mp3"></audio>
+
+<script>
+/* ===== FRASES ===== */
+const phrases = [
+  "Disciplina é escolher o que você quer mais, e não o que você quer agora.",
+  "O homem que domina a si mesmo não precisa dominar os outros.",
+  "Constância supera intensidade.",
+  "Honra não é aparência, é hábito.",
+  "A mente calma corta mais fundo que a lâmina afiada."
+];
+
+const todayKey = new Date().toDateString();
+document.getElementById("dailyPhrase").textContent =
+  phrases[new Date().getDay()];
+
+/* ===== LOCAL STORAGE ===== */
+let clicks = Number(localStorage.getItem("clicks")) || 0;
+let streak = Number(localStorage.getItem("streak")) || 0;
+let bestStreak = Number(localStorage.getItem("bestStreak")) || 0;
+let lastWin = localStorage.getItem("lastWin");
+
+/* ===== ATUALIZA UI ===== */
+const clickInfo = document.getElementById("clickInfo");
+const streakEl = document.getElementById("streak");
+const bestStreakEl = document.getElementById("bestStreak");
+
+function updateUI() {
+  clickInfo.textContent = `Cliques: ${clicks}`;
+  streakEl.textContent = streak;
+  bestStreakEl.textContent = bestStreak;
+}
+updateUI();
+
+/* ===== CONTADOR DE CLIQUES ===== */
+document.getElementById("clickBtn").onclick = () => {
+  clicks++;
+  localStorage.setItem("clicks", clicks);
+  updateUI();
+
+  if ([10,50,100].includes(clicks))
+    clickInfo.textContent = `🏆 Conquista: ${clicks} cliques`;
+};
+
+/* ===== CONTADOR DE HORÁRIO ===== */
+let timer = null;
+
+document.getElementById("startCountdown").onclick = () => {
+  if (timer) clearInterval(timer);
+
+  const input = document.getElementById("hourInput").value.trim();
+  const match = input.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)$/i);
+  if (!match) return alert("Formato inválido.");
+
+  let [ , h, m, s, p ] = match;
+  h = +h; m = +m; s = s ? +s : 0;
+  if (p.toUpperCase()==="PM" && h!==12) h+=12;
+  if (p.toUpperCase()==="AM" && h===12) h=0;
+
+  const now = new Date();
+  let target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, s);
+  if (target <= now) target.setDate(target.getDate()+1);
+
+  timer = setInterval(() => {
+    const diff = target - new Date();
+    if (diff <= 0) {
+      clearInterval(timer);
+      document.getElementById("countdown").textContent = "Dia vencido.";
+      document.getElementById("myAudio").play();
+
+      if (lastWin !== todayKey) {
+        streak++;
+        bestStreak = Math.max(bestStreak, streak);
+        lastWin = todayKey;
+        localStorage.setItem("streak", streak);
+        localStorage.setItem("bestStreak", bestStreak);
+        localStorage.setItem("lastWin", lastWin);
+        updateUI();
+      }
+      return;
+    }
+
+    document.getElementById("countdown").textContent =
+      new Date(diff).toISOString().substr(11,8);
+  },1000);
+};
+
+/* ===== CONTADOR DE DIAS ===== */
+document.getElementById("calcDays").onclick = () => {
+  const d = new Date(document.getElementById("targetDate").value);
+  if (isNaN(d)) return;
+  const diff = Math.ceil((d - new Date()) / 86400000);
+  document.getElementById("daysResult").textContent =
+    diff >= 0 ? `Faltam ${diff} dias.` : "Essa data já passou.";
+};
+
+/* ===== MODO FOCO ===== */
+document.getElementById("focusBtn").onclick = () => {
+  document.body.classList.toggle("focus");
+};
+</script>
+
+</body>
+</html>
+
 
